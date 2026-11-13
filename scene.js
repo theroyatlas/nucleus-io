@@ -12,6 +12,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
 import { COLORS, SPACE }   from './constants.js';
+import { observeReducedMotion, motionPassFlags } from './motion.js';
 
 // ── Custom Shader: Vignette ────────────────────────────────
 const VignetteShader = {
@@ -228,6 +229,7 @@ export function resolveInitialQuality({
 }
 
 let currentQuality = resolveInitialQuality();
+let stopObservingMotion;
 
 export function getRenderQuality() {
     return currentQuality;
@@ -251,6 +253,17 @@ export function syncQualityButtons(quality = currentQuality) {
     });
 }
 
+// Preference changes only mask motion effects; they never overwrite quality,
+// pixel ratio, bloom intensity, or the user's saved choice.
+function syncMotionEffects() {
+    const flags = motionPassFlags(getQualityPassFlags(currentQuality));
+    if (filmGrainPass) filmGrainPass.enabled = flags.grain;
+    if (warpPass) {
+        warpPass.enabled = flags.warp;
+        if (!flags.warp) warpPass.uniforms.uSpeed.value = 0;
+    }
+}
+
 export function applyRenderQuality(quality) {
     currentQuality = normalizeQuality(quality);
     const flags = getQualityPassFlags(currentQuality);
@@ -270,11 +283,7 @@ export function applyRenderQuality(quality) {
     }
     if (vignettePass) vignettePass.enabled = flags.vignette;
     if (chromaPass) chromaPass.enabled = flags.chroma;
-    if (filmGrainPass) filmGrainPass.enabled = flags.grain;
-    if (warpPass) {
-        warpPass.enabled = flags.warp;
-        if (!flags.warp) warpPass.uniforms.uSpeed.value = 0;
-    }
+    syncMotionEffects();
     syncQualityButtons(currentQuality);
     return currentQuality;
 }
@@ -284,6 +293,9 @@ export function applyRenderQuality(quality) {
  * and a full post-processing pipeline.
  */
 export function initScene() {
+    stopObservingMotion?.();
+    stopObservingMotion = observeReducedMotion(syncMotionEffects);
+
     clock = new THREE.Clock();
 
     // ─── Renderer ──────────────────────────────────────────

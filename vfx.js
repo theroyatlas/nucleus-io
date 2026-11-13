@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { COLORS, SPACE } from './constants.js';
 import { getQualityConfig, getRenderQuality } from './scene.js';
+import { reducedMotion } from './motion.js';
 
 // ── Internal state ─────────────────────────────────────────
 let explosions = [];
@@ -971,6 +972,8 @@ export function createLightPillars(scene) {
  * @param {number} dt — delta time in seconds
  */
 export function updateEnvironment(dt) {
+    // Decorative drift/pulses freeze in place; gameplay and rendering keep ticking.
+    if (reducedMotion) return;
     cosmicTime += dt;
 
     // Nebula cloud shader time

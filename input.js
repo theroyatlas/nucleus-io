@@ -11,8 +11,17 @@ export const keys = {};
 export const touchState = { moveX: 0, moveY: 0 };
 
 let paintClearedFlightInput = () => {};
+let resetPending = false;
+
+// A short reset tap can begin and end between animation frames.
+export function consumeResetCommand() {
+    const pending = resetPending;
+    resetPending = false;
+    return pending;
+}
 
 export function clearFlightCommands() {
+    resetPending = false;
     for (const code of Object.keys(keys)) keys[code] = false;
     touchState.moveX = 0;
     touchState.moveY = 0;
@@ -58,6 +67,7 @@ export function setupInput({ shipGroup, ensureAudio }) {
         }
 
         keys[e.code] = true;
+        if (e.code === 'KeyR') resetPending = true;
         ensureAudio();
         if (['Space','ControlLeft','ControlRight'].includes(e.code)) e.preventDefault();
     });
@@ -195,6 +205,7 @@ export function setupInput({ shipGroup, ensureAudio }) {
             e.preventDefault();
             ensureAudio();
             keys[code] = true;
+            if (code === 'KeyR') resetPending = true;
             btn.classList.add('active');
         };
         const release = e => {
@@ -204,7 +215,10 @@ export function setupInput({ shipGroup, ensureAudio }) {
         };
         btn.addEventListener('touchstart', press, { passive: false });
         btn.addEventListener('touchend', release, { passive: false });
-        btn.addEventListener('touchcancel', release, { passive: false });
+        btn.addEventListener('touchcancel', e => {
+            release(e);
+            if (code === 'KeyR') resetPending = false;
+        }, { passive: false });
         btn.addEventListener('mousedown', press);
         btn.addEventListener('mouseup', release);
         btn.addEventListener('mouseleave', release);

@@ -9,7 +9,7 @@ import {
     CAM_FOLLOW_PER_FRAME, CAM_OFFSET, TRAIL_LEN,
     SHAKE_FRAME_DECAY, FLIGHT_REF_FPS,
 } from './constants.js';
-import { keys, touchState, clearFlightCommands, flightInputSuppressed } from './input.js';
+import { keys, touchState, clearFlightCommands, consumeResetCommand, flightInputSuppressed } from './input.js';
 
 // ── Exported state ─────────────────────────────────────────
 export let shipGroup;
@@ -255,7 +255,7 @@ function parkForCinematic(audio) {
 export function updateShip(dt, audio, onReset) {
     if (Number.isFinite(dt) && dt > 0) flightDt = dt;
 
-    const resetPressed = !!keys['KeyR'];
+    const resetPressed = consumeResetCommand() || !!keys['KeyR'];
     const pilotLocked = Boolean(cinematicTarget) || flightInputSuppressed();
     if (pilotLocked) clearFlightCommands();
     if (resetPressed) onReset();
